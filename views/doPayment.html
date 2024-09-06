@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Payment</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f9;
+        margin: 0;
+        padding: 0;
+        color: #333;
+        text-align: center;
+      }
+      .container {
+        max-width: 600px;
+        margin: 50px auto;
+        padding: 20px;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      .status {
+        font-size: 1.2em;
+        margin-top: 20px;
+      }
+      .button {
+        margin: 10px;
+        padding: 10px 20px;
+        font-size: 1em;
+        cursor: pointer;
+        border: none;
+        border-radius: 5px;
+        color: white;
+      }
+      .success {
+        background-color: #4caf50;
+      }
+      .failed {
+        background-color: #f44336;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Payment</h1>
+      <div id="amount"></div>
+      <div id="status" class="status"></div>
+      <button class="button success" onclick="changePaymentStatus('success')">
+        Success
+      </button>
+      <button class="button failed" onclick="changePaymentStatus('failed')">
+        Failed
+      </button>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // Load total amount from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const amount = urlParams.get("amount");
+        document.getElementById(
+          "amount"
+        ).textContent = `Total Amount: ₹${amount}`;
+
+        // Function to change payment status
+        function changePaymentStatus(status) {
+          fetch("/api/payment/status", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ status: status }),
+          })
+            .then((response) => response.text())
+            .then((data) => {
+              document.getElementById(
+                "status"
+              ).textContent = `Payment status: ${data}`;
+            })
+            .catch((error) =>
+              console.error("Error updating payment status:", error)
+            );
+        }
+
+        // Expose the function to the global scope
+        window.changePaymentStatus = changePaymentStatus;
+      });
+    </script>
+  </body>
+</html>

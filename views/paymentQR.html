@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Payment</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f9;
+        margin: 0;
+        padding: 0;
+        color: #333;
+        text-align: center;
+      }
+      .container {
+        max-width: 600px;
+        margin: 50px auto;
+        padding: 20px;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      .qr-code {
+        margin: 20px 0;
+      }
+      .status {
+        font-size: 1.2em;
+        margin-top: 20px;
+      }
+      .timer {
+        font-size: 1.5em;
+        margin: 20px 0;
+      }
+      .refresh-button {
+        display: none;
+        margin-top: 20px;
+        padding: 10px 20px;
+        font-size: 1em;
+        cursor: pointer;
+        border: none;
+        border-radius: 5px;
+        background-color: #007bff;
+        color: white;
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Payment</h1>
+      <div id="amount"></div>
+      <canvas id="qrcode" class="qr-code"></canvas>
+      <div id="timer" class="timer">Time remaining: 03:00</div>
+      <div id="status" class="status"></div>
+      <button
+        id="refreshButton"
+        class="refresh-button"
+        onclick="location.reload()"
+      >
+        Refresh Page
+      </button>
+    </div>
+
+    <script>
+      changePaymentStatus("pending");
+      function changePaymentStatus(status) {
+        fetch("/api/payment/status", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: status }),
+        })
+          .then((response) => response.text())
+          .then((data) => {
+            document.getElementById(
+              "status"
+            ).textContent = `Payment status: ${data}`;
+          })
+          .catch((error) =>
+            console.error("Error updating payment status:", error)
+          );
+      }
+      document.addEventListener("DOMContentLoaded", function () {
+        // Load total amount from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const amount = urlParams.get("amount");
+        document.getElementById(
+          "amount"
+        ).textContent = `Total Amount: ₹${amount}`;
+
+        // Generate QR code
+        const ip = "http://192.168.43.5:3002";
+        const qrCodeUrl = `${ip}/do/payment?amount=${amount}`;
+        QRCode.toCanvas(
+          document.getElementById("qrcode"),
+          qrCodeUrl,
+          { width: 300, height: 300 },
+          function (error) {
+            if (error) console.error(error);
+            console.log("QR code generated!");
+          }
+        );
+
+        // Timer logic
+        let timeRemaining = 180; // 3 minutes in seconds
+        const timerElement = document.getElementById("timer");
+        const qrCodeElement = document.getElementById("qrcode");
+        const refreshButton = document.getElementById("refreshButton");
+
+        const timerInterval = setInterval(() => {
+          timeRemaining--;
+          const minutes = Math.floor(timeRemaining / 60);
+          const seconds = timeRemaining % 60;
+          timerElement.textContent = `Time remaining: ${minutes
+            .toString()
+            .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+
+          if (timeRemaining <= 0) {
+            clearInterval(timerInterval);
+            qrCodeElement.style.display = "none";
+            refreshButton.style.display = "block";
+          }
+        }, 1000);
+
+        // Poll payment status every 3 seconds
+        function checkPaymentStatus() {
+          fetch("/api/payment/status")
+            .then((response) => response.text())
+            .then((data) => {
+              console.log(data);
+
+              const statusElement = document.getElementById("status");
+              switch (data) {
+                case "pending":
+                  statusElement.textContent = "Please complete the payment.";
+                  break;
+                case "failed":
+                  statusElement.textContent =
+                    "Payment failed. Please try again.";
+                  break;
+                case "success":
+                  statusElement.textContent = "Payment successful!";
+                  clearInterval(statusInterval); // Stop polling
+                  break;
+                default:
+                  statusElement.textContent = "Unknown status.";
+              }
+            })
+            .catch((error) =>
+              console.error("Error checking payment status:", error)
+            );
+        }
+
+        const statusInterval = setInterval(checkPaymentStatus, 3000);
+      });
+    </script>
+  </body>
+</html>

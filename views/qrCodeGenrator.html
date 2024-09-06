@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QR Code Generator</title>
+    <style>
+      /* Enhanced styling for the page */
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+        background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+      }
+      .container {
+        text-align: center;
+        padding: 30px;
+        background-color: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+      h1 {
+        color: #333;
+        margin-bottom: 20px;
+      }
+      button {
+        padding: 12px 24px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background-color 0.3s ease, transform 0.3s ease;
+      }
+      button:hover {
+        background-color: #0056b3;
+        transform: translateY(-2px);
+      }
+      #qrcode {
+        margin-top: 20px;
+        width: 300px;
+        height: 300px;
+        border: 2px solid #007bff;
+        border-radius: 8px;
+        display: none; /* Initially hidden */
+      }
+      #status {
+        margin-top: 20px;
+        font-size: 18px;
+        color: #333;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>Login By scanning QR code</h1>
+      <button id="generateButton" onclick="generateQRCode()">
+        Generate QR Code
+      </button>
+      <canvas id="qrcode"></canvas>
+      <div id="status">Checking connection...</div>
+      <div id="username"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js"></script>
+    <script>
+      function generateQRCode() {
+        const qrcodeContainer = document.getElementById("qrcode");
+        const generateButton = document.getElementById("generateButton");
+
+        fetch("/api/gen/string") // Fetch the string from your API endpoint
+          .then((response) => response.text()) // Parse the response as text
+          .then((text) => {
+            if (text) {
+              QRCode.toCanvas(
+                qrcodeContainer,
+                text,
+                { width: 300, height: 300 },
+                function (error) {
+                  if (error) {
+                    console.error(error);
+                    alert(
+                      "Failed to generate QR code. Please check your input."
+                    );
+                  } else {
+                    console.log("QR code generated!");
+                    qrcodeContainer.style.display = "block"; // Show QR code
+                    generateButton.style.display = "none"; // Hide button
+
+                    // Set a timer to hide the QR code after 1 minute
+                    setTimeout(() => {
+                      qrcodeContainer.style.display = "none"; // Hide QR code
+                      generateButton.style.display = "inline-block"; // Show button
+                    }, 60000); // 60000 milliseconds = 1 minute
+                  }
+                }
+              );
+            } else {
+              alert("No data received from the API.");
+            }
+          })
+          .catch((error) => {
+            console.error("Error fetching data:", error);
+            alert("Failed to fetch data from the API.");
+          });
+      }
+
+      function checkConnectionStatus() {
+        const generateButton = document.getElementById("generateButton");
+
+        fetch("/api/gen/status")
+          .then((response) => response.text())
+          .then((status) => {
+            const statusElement = document.getElementById("status");
+            if (status === "true") {
+              statusElement.textContent = "Connected";
+              statusElement.style.color = "green";
+              generateButton.textContent = "Proceed";
+              generateButton.onclick = goToBillingPage();
+              generateButton.style.display = "inline-block";
+              fetch("/api/gen/user")
+                .then((response) => response.text())
+                .then((uname) => {
+                  const user = JSON.parse(uname);
+                  const usernameElement = document.getElementById("username");
+                  usernameElement.textContent = "Username: " + user.name;
+                  localStorage.setItem("user", user);
+                });
+            } else {
+              statusElement.textContent = "Disconnected";
+              statusElement.style.color = "red";
+            }
+          })
+          .catch((error) => {
+            console.error("Error checking connection status:", error);
+            const statusElement = document.getElementById("status");
+            statusElement.textContent = "Error checking connection";
+            statusElement.style.color = "orange";
+          });
+      }
+
+      function goToBillingPage() {
+        window.location.href = "/bill";
+      }
+
+      // Check connection status every 3 seconds
+      setInterval(checkConnectionStatus, 3000);
+    </script>
+  </body>
+</html>

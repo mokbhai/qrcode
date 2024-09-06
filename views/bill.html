@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bills</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f9;
+        margin: 0;
+        padding: 0;
+        color: #333;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      header,
+      footer {
+        background-color: #333;
+        color: white;
+        text-align: center;
+        padding: 10px 0;
+      }
+      .bill-container {
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      .bill-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+      }
+      .total {
+        font-weight: bold;
+        margin-top: 20px;
+        text-align: right;
+      }
+      .checkout-button,
+      .add-medicine-button {
+        display: block;
+        width: 100%;
+        padding: 15px;
+        background-color: #4caf50;
+        color: white;
+        text-align: center;
+        text-decoration: none;
+        border-radius: 5px;
+        margin-top: 20px;
+        transition: background-color 0.3s;
+      }
+      .checkout-button:hover,
+      .add-medicine-button:hover {
+        background-color: #45a049;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Bills</h1>
+    </header>
+    <div class="container">
+      <div class="bill-container" id="bill"></div>
+      <div class="total" id="total"></div>
+      <button class="add-medicine-button" onclick="addMedicine()">
+        Add Medicine
+      </button>
+      <a class="checkout-button" onclick="goToPaymentPage()">Checkout</a>
+    </div>
+
+    <script>
+      let FinalAmount;
+      function getMedicines() {
+        fetch("/api/get/medicine", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ userId: 1 }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            displayBill(data);
+          })
+          .catch((error) => {
+            console.error("Error fetching data:", error);
+          });
+      }
+
+      function displayBill(data) {
+        const billContainer = document.getElementById("bill");
+        billContainer.innerHTML = ""; // Clear previous content
+
+        data.medicines.forEach((med) => {
+          const item = document.createElement("div");
+          item.className = "bill-item";
+          item.innerHTML = `
+                <span>${med.name} (${med.mg}mg) - ${med.inDay} times/day for ${med.upto} days</span>
+                <span>₹${med.pricePerPiece} each, Total: ₹${med.totalMedPrice}</span>
+            `;
+          billContainer.appendChild(item);
+        });
+
+        const totalElement = document.getElementById("total");
+        totalElement.textContent = `Total Amount: ₹${data.totalPrice}`;
+
+        FinalAmount = data.totalPrice;
+        // Store total amount in local storage
+        localStorage.setItem("totalAmount", data.totalPrice);
+      }
+
+      function addMedicine() {
+        const name = prompt("Enter medicine name:");
+        const mg = prompt("Enter dosage in mg:");
+        const inDay = prompt("Enter times per day:");
+        const upto = prompt("Enter number of days:");
+        const pricePerPiece = prompt("Enter price per piece:");
+
+        if (name && mg && inDay && upto && pricePerPiece) {
+          const totalMedPrice = inDay * upto * pricePerPiece;
+          const newMedicine = {
+            name,
+            mg,
+            inDay,
+            upto,
+            pricePerPiece,
+            totalMedPrice,
+          };
+
+          // Here you would typically send this data to the server
+          // For now, we'll just log it and add it to the display
+          console.log("New Medicine:", newMedicine);
+
+          // Simulate adding to the bill
+          const billContainer = document.getElementById("bill");
+          const item = document.createElement("div");
+          item.className = "bill-item";
+          item.innerHTML = `
+                <span>${newMedicine.name} (${newMedicine.mg}mg) - ${newMedicine.inDay} times/day for ${newMedicine.upto} days</span>
+                <span>₹${newMedicine.pricePerPiece} each, Total: ₹${newMedicine.totalMedPrice}</span>
+            `;
+          billContainer.appendChild(item);
+
+          // Update total
+          const totalElement = document.getElementById("total");
+          const currentTotal =
+            parseFloat(
+              totalElement.textContent.replace("Total Amount: ₹", "")
+            ) || 0;
+          const newTotal = currentTotal + newMedicine.totalMedPrice;
+          totalElement.textContent = `Total Amount: ₹${newTotal}`;
+          FinalAmount = newTotal;
+          // Update local storage
+          localStorage.setItem("totalAmount", newTotal);
+        }
+      }
+
+      function goToPaymentPage() {
+        window.location.href = "/payment?amount=" + FinalAmount;
+      }
+      // Call getMedicines when the DOM is fully loaded
+      document.addEventListener("DOMContentLoaded", getMedicines);
+    </script>
+  </body>
+</html>
