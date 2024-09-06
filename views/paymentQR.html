@@ -91,7 +91,7 @@
         ).textContent = `Total Amount: ₹${amount}`;
 
         // Generate QR code
-        const ip = "http://192.168.43.5:3002";
+        const ip = "https://dispencer.vercel.app";
         const qrCodeUrl = `${ip}/do/payment?amount=${amount}`;
         QRCode.toCanvas(
           document.getElementById("qrcode"),
