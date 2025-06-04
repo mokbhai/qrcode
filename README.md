@@ -1,5 +1,5 @@
 # Automated Medicine Dispenser (QR Code Based)
-
+Read me update
 A Node.js and Express-based web application for an automated medicine dispenser system using QR code authentication and payment. The system allows users to log in, scan or generate QR codes for authentication, view and manage their medicine bills, and make payments securely.
 
 ## Features
